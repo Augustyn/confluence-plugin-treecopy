@@ -155,14 +155,14 @@
 			jQuery("#parenttitle").bind("input", function() {
 				jQuery("#parenttitle").autoComplete('destroy');
 				if ( jQuery("#parenttitle").val().length > 2 ) {
-					jQuery("#parenttitle").autoComplete({ajax: '/plugins/servlet/treecopypages?action=getpages&spacekey='+jQuery("#targetspace option:selected").val()+'&value='+jQuery("#parenttitle").val()}).focus();
+					jQuery("#parenttitle").autoComplete({ajax: '../servlet/treecopypages?action=getpages&spacekey='+jQuery("#targetspace option:selected").val()+'&value='+jQuery("#parenttitle").val()}).focus();
 				}					
 			});
 			
 			jQuery("#targetspace").change(function() {
 				jQuery("#parenttitle").autoComplete('destroy');
 				if ( jQuery("#parenttitle").val().length > 2 ) {
-					jQuery("#parenttitle").autoComplete({ajax: '/plugins/servlet/treecopypages?action=getpages&spacekey='+jQuery("#targetspace option:selected").val()+'&value='+jQuery("#parenttitle").val()}).focus();
+					jQuery("#parenttitle").autoComplete({ajax: '../servlet/treecopypages?action=getpages&spacekey='+jQuery("#targetspace option:selected").val()+'&value='+jQuery("#parenttitle").val()}).focus();
 				}
 			});	
 
