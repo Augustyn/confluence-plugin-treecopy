@@ -28,11 +28,11 @@ public class PagesServlet extends HttpServlet {
 	private static final long serialVersionUID = -1227774810957633829L;
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		
+
 		String actionName = request.getParameter("action");
-		
+
 		if (actionName!=null && actionName.equals("getpages")) {
-		            
+
         	PageManager pageManager = (PageManager)ContainerManager.getComponent("pageManager");
             SpaceManager spaceManager = (SpaceManager)ContainerManager.getComponent("spaceManager");
             PermissionManager permissionManager = (PermissionManager)ContainerManager.getComponent("permissionManager");
@@ -40,13 +40,14 @@ public class PagesServlet extends HttpServlet {
             User user = AuthenticatedUserThreadLocal.getUser();
             String spacekey = request.getParameter("spacekey");
         	String term = request.getParameter("value");
-            
+
             Space space = spaceManager.getSpace(spacekey);
 
             List<Map<String, String>> pagemap = new ArrayList<Map<String, String>>();
-            
+
             if ( term != null && !term.isEmpty() && space != null ) {
-            	List<Page> pages = pageManager.getPagesStartingWith(space, term);
+            	@SuppressWarnings("unchecked")
+				List<Page> pages = pageManager.getPagesStartingWith(space, term);
                 for (Page page : pages) {
                 	if(permissionManager.hasPermission(user, Permission.VIEW, page)) {
                 		Map<String, String> entry = new HashMap<String, String>();
@@ -55,14 +56,14 @@ public class PagesServlet extends HttpServlet {
                 	}
     			}
 			}
-            
+
             Gson gson = new Gson();
             response.getWriter().write(gson.toJson(pagemap));
-            
+
 		}
-		
+
 	}
-	
+
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		doPost(request, response);
 	}

@@ -8,15 +8,15 @@ import org.apache.log4j.Logger;
 
 import com.atlassian.confluence.labels.Label;
 import com.atlassian.confluence.labels.LabelManager;
-import com.atlassian.confluence.labels.Labelable;
 import com.atlassian.confluence.pages.Attachment;
 import com.atlassian.confluence.pages.AttachmentManager;
+import com.atlassian.confluence.pages.DuplicateDataRuntimeException;
 import com.atlassian.confluence.pages.Page;
 import com.atlassian.confluence.pages.PageManager;
 import com.atlassian.confluence.spaces.Space;
 
 public class CopyPage implements Comparable<CopyPage> {
-	
+
     private static final Logger LOG = Logger.getLogger(CopyPage.class);
 
 	private int position;
@@ -27,22 +27,22 @@ public class CopyPage implements Comparable<CopyPage> {
 	private long id;
 	private long newid;
 	private CopyPage parent;
-	
+
 	private List<CopyPage> children = new ArrayList<CopyPage>();
-	
+
 	public CopyPage(long id, int position, int depth, String title) {
 		this.id=id;
 		this.position = position;
 		this.depth = depth;
 		this.title = title;
 	}
-	
+
 	public void addChild(CopyPage childcopy) {
 		childcopy.setParent(this);
 		this.children.add(childcopy);
 	}
-	
-	public void readChildHierarchy(List<CopyPage> level) {		
+
+	public void readChildHierarchy(List<CopyPage> level) {
 		level.add(this);
 		List<CopyPage> childs = this.getChildren();
 		for (int i=0; i<childs.size(); i++) {
@@ -57,7 +57,7 @@ public class CopyPage implements Comparable<CopyPage> {
 	}
 
 	public CopyPage getCopyPageById(long id) {
-		
+
 		if (this.id==id) {
 			return this;
 		} else {
@@ -68,32 +68,37 @@ public class CopyPage implements Comparable<CopyPage> {
 				if (match!=null) return match;
 			}
 		}
-		
+
 		return null;
 	}
-	
+
 	public void storeCopyPages(Space space, PageManager pageManager, AttachmentManager attachmentManager, LabelManager labelManager, Page defaultParentPage) {
-		
+
 		if (this.toggle) this.storeCopyPage(space, pageManager, attachmentManager, labelManager, defaultParentPage);
-		
+
 		List<CopyPage> childs = this.getChildren();
 		for (int i=0; i<childs.size(); i++) {
 			CopyPage child = (CopyPage)childs.get(i);
-			child.storeCopyPages(space, pageManager, attachmentManager, labelManager, defaultParentPage);
+			try {
+				child.storeCopyPages(space, pageManager, attachmentManager, labelManager, defaultParentPage);
+			} catch (DuplicateDataRuntimeException e) {
+				LOG.warn("Page " + child.getId() + " named: " + child.getTitle() + " already exists in space: " + space.getKey() );
+			}
 		}
-		
 	}
-	
+
 	private void storeCopyPage(Space space, PageManager pageManager, AttachmentManager attachmentManager, LabelManager labelManager, Page defaultParentPage) {
-		
+
 		Page oldPage = pageManager.getPage(this.id);
+
+//		Page parentPage = defaultParentPage;
+//		if (this.getParent()!=null) {
+//			parentPage = pageManager.getPage(this.getParent().getNewid());
+//		}
+		long parentPageId = findFirstAvailableParent(pageManager, defaultParentPage);
+		Page parentPage = pageManager.getPage(parentPageId);
 		
-		Page parentPage = defaultParentPage;
-		
-		if (this.getParent()!=null) {
-			parentPage = pageManager.getPage(this.getParent().getNewid());
-		}
-		
+
 		final Page newPage = new Page();
         newPage.setTitle(this.getNewtitle());
         newPage.setSpace(space);
@@ -108,7 +113,7 @@ public class CopyPage implements Comparable<CopyPage> {
 			}
         }
         this.setNewid(newPage.getId());
-        
+
         List<Attachment> oldAttachments = oldPage.getLatestVersionsOfAttachments();
         for (Attachment oldAttachment : oldAttachments) {
         	try {
@@ -128,18 +133,41 @@ public class CopyPage implements Comparable<CopyPage> {
             } catch (Exception exception) {
             	exception.printStackTrace();
             }
-            
+
         }
-        
+
         List<Label> oldLabels = oldPage.getLabels();
         for (Label oldLabel : oldLabels) {
-        	labelManager.addLabel((Labelable)newPage, oldLabel);
+        	//TODO After 4.3.7 change it to labelable labelableblablablable
+        	labelManager.addLabel(newPage, oldLabel);
         }
-        
-        
-        
+
+
+
 	}
-	
+
+	/**
+	 * Rekurencja.
+	 * Te metoda stara się znaleźć najbliższego parenta aktualnie kopiowanej strony (this), 
+	 * który także będzie kopiowany. Gdy taki się nie znajdzie, jako parenta przyjmujemy stronę podaną przez usera jako "Parent Page"/
+	 * @return id strony parenta
+	 */
+	private long findFirstAvailableParent(PageManager pageManager, Page defaultParentPage) {
+		
+		if ( this.getParent() == null ){
+			// jesteśmy na samej górze - tak więc naszym parentem będzie ten który ustawił user
+			return defaultParentPage.getId(); 
+		}
+		
+		long parentPageId = this.getParent().getNewid();
+		
+		if (parentPageId == 0){
+			// parent nie będzie kopiowany - user go odznaczył - szukamy dalej
+			parentPageId = this.getParent().findFirstAvailableParent(pageManager, defaultParentPage);
+		}
+		return parentPageId;
+	}
+
 	public int getPosition() {
 		return position;
 	}
@@ -155,7 +183,7 @@ public class CopyPage implements Comparable<CopyPage> {
 	public long getId() {
 		return id;
 	}
-	
+
 	public boolean isToggle() {
 		return toggle;
 	}
@@ -172,7 +200,7 @@ public class CopyPage implements Comparable<CopyPage> {
 		this.newtitle = newtitle;
 	}
 
-	
+
 	public long getNewid() {
 		return newid;
 	}
@@ -190,15 +218,15 @@ public class CopyPage implements Comparable<CopyPage> {
 	}
 
 	public int compareTo(CopyPage copyPage) {
-		
+
 		//a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object.
-				
+
 		if (this.position<copyPage.position) return -1;
 		if (this.position==copyPage.position) return 0;
 		if (this.position>copyPage.position) return 1;
 		return 0;
 	}
-	
-	
-	
+
+
+
 }
