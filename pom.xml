@@ -7,7 +7,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.nurago.confluence.plugins</groupId>
     <artifactId>treecopy</artifactId>
-    <version>0.32.0</version>
+    <version>0.33.0</version>
 
     <organization>
         <name>Imaginary Machines</name>
@@ -82,7 +82,7 @@
     </build>
 
     <properties>
-    	<confluence.version>4.3</confluence.version>
+    	<confluence.version>5.1.1</confluence.version>
     	<confluence.data.version>3.5</confluence.data.version>
     </properties>
 
