@@ -25,17 +25,21 @@ import java.util.Map;
 
 public class PagesServlet extends HttpServlet {
 
-	private static final long serialVersionUID = -1227774810957633829L;
+    private static final long serialVersionUID = -1227774810957633829L;
+    public static final String ACTION = "action";
+    public static final String ACTION_GETPAGES = "getpages";
 
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
-		String actionName = request.getParameter("action");
+		String actionName = request.getParameter(ACTION);
 
-		if (actionName!=null && actionName.equals("getpages")) {
+		if (actionName == null || !actionName.equals(ACTION_GETPAGES)) {
+            return;
+        }
 
-        	PageManager pageManager = (PageManager)ContainerManager.getComponent("pageManager");
-            SpaceManager spaceManager = (SpaceManager)ContainerManager.getComponent("spaceManager");
-            PermissionManager permissionManager = (PermissionManager)ContainerManager.getComponent("permissionManager");
+        	PageManager pageManager = (PageManager) ContainerManager.getComponent("pageManager");
+            SpaceManager spaceManager = (SpaceManager) ContainerManager.getComponent("spaceManager");
+            PermissionManager permissionManager = (PermissionManager) ContainerManager.getComponent("permissionManager");
 
             User user = AuthenticatedUserThreadLocal.getUser();
             String spacekey = request.getParameter("spacekey");
@@ -56,12 +60,8 @@ public class PagesServlet extends HttpServlet {
                 	}
     			}
 			}
-
             Gson gson = new Gson();
             response.getWriter().write(gson.toJson(pagemap));
-
-		}
-
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

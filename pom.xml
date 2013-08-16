@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<parent>
+		<groupId>com.atlassian.confluence.plugin.base</groupId>
+		<artifactId>confluence-plugin-base</artifactId>
+		<version>27</version>
+	</parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.nurago.confluence.plugins</groupId>
+    <groupId>com.imaginarymachines.confluence.plugins</groupId>
     <artifactId>treecopy</artifactId>
-    <version>0.33.0</version>
+    <version>0.34.0</version>
 
     <organization>
         <name>Imaginary Machines</name>
@@ -49,14 +54,14 @@
             <version>1.9.12</version>
             <scope>test</scope>
         </dependency>
-        
+
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
             <version>2.5</version>
             <scope>provided</scope>
         </dependency>
-        
+
     </dependencies>
 
     <build>
@@ -74,16 +79,17 @@
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>${jdkLevel}</source>
+                    <target>${jdkLevel}</target>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
     <properties>
-    	<confluence.version>5.1.1</confluence.version>
+    	<confluence.version>4.3</confluence.version>
     	<confluence.data.version>3.5</confluence.data.version>
+    	<jdkLevel>1.6</jdkLevel>
     </properties>
 
 </project>

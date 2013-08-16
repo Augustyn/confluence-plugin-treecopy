@@ -1,33 +1,26 @@
 package com.imaginarymachines.confluence.plugins;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Enumeration;
-
-import javax.servlet.http.HttpServletRequest;
-
-import org.apache.log4j.Logger;
-
 import com.atlassian.confluence.core.ConfluenceActionSupport;
 import com.atlassian.confluence.core.ListBuilder;
 import com.atlassian.confluence.labels.LabelManager;
-import com.atlassian.confluence.pages.AbstractPage;
-import com.atlassian.confluence.pages.Attachment;
-import com.atlassian.confluence.pages.AttachmentManager;
-import com.atlassian.confluence.pages.AttachmentUtils;
-import com.atlassian.confluence.pages.Page;
-import com.atlassian.confluence.pages.PageManager;
+import com.atlassian.confluence.pages.*;
 import com.atlassian.confluence.pages.actions.PageAware;
-import com.atlassian.confluence.spaces.SpaceManager;
-import com.atlassian.confluence.spaces.Space;
-import com.atlassian.confluence.spaces.SpacesQuery;
-import com.opensymphony.webwork.ServletActionContext;
-import com.atlassian.confluence.user.AuthenticatedUserThreadLocal;
 import com.atlassian.confluence.security.SpacePermission;
+import com.atlassian.confluence.spaces.Space;
+import com.atlassian.confluence.spaces.SpaceManager;
+import com.atlassian.confluence.spaces.SpacesQuery;
+import com.atlassian.confluence.user.AuthenticatedUserThreadLocal;
+import com.atlassian.plugin.webresource.UrlMode;
 import com.atlassian.plugin.webresource.WebResourceUrlProvider;
 import com.atlassian.spring.container.ContainerManager;
 import com.atlassian.user.User;
-import com.atlassian.plugin.webresource.UrlMode;
+import com.opensymphony.webwork.ServletActionContext;
+import org.apache.log4j.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 /**
@@ -35,13 +28,15 @@ import java.util.List;
 */
 public class TreecopyAction extends ConfluenceActionSupport implements PageAware {
 
-	private static final String TOGGLE_PREFIX = "toggle-";
+    private static final String TOGGLE_PREFIX = "toggle-";
 
 	private static final long serialVersionUID = 7584904352458114888L;
 
     private static final Logger LOG = Logger.getLogger(TreecopyAction.class);
+    public static final String TARGETSPACE = "targetspace";
+    public static final String PARENTTITLE = "parenttitle";
 
-	private SpaceManager spaceManager;
+    private SpaceManager spaceManager;
 	private PageManager pageManager;
 	private AttachmentManager attachmentManager;
 	private LabelManager labelManager;
@@ -71,7 +66,7 @@ public class TreecopyAction extends ConfluenceActionSupport implements PageAware
 	public String executeCopy() {
 
 		currPage = (Page) this.getWebInterfaceContext().getPage();
-		CopyPage currCopy = createCopyPage(currPage,1);
+		CopyPage currCopy = createCopyPage(currPage, 1);
 
 		HttpServletRequest request = ServletActionContext.getRequest();
 
@@ -85,18 +80,21 @@ public class TreecopyAction extends ConfluenceActionSupport implements PageAware
 
 				long originalPageId = Long.parseLong(value);
 				CopyPage copypage = currCopy.getCopyPageById(originalPageId);
-				if (copypage!=null) {
+				if (copypage != null) {
 					// Sprawdzamy czy zalaczniki istnieja na filesystemie.
 					if (!areAttachmentsOk(pageManager.getPage(originalPageId))) {
-						String pageTitle = pageManager.getPage(originalPageId).getDisplayTitle();
-						this.addActionError("copypagetree.error.missing.attachment", new Object[]{pageTitle} );
+						String pageTitle = pageManager.getPage(originalPageId)
+								.getDisplayTitle();
+						this.addActionError(
+								"copypagetree.error.missing.attachment",
+								new Object[] { pageTitle });
 						return executeSetnames();
 					}
-
 					copypage.setToggle(true);
-					copypage.setNewtitle(request.getParameter("title-"+value));
+					copypage.setNewtitle(request.getParameter("title-" + value));
 					if (LOG.isDebugEnabled()) {
-						LOG.debug("COPY id=" + value+" newtitle="+copypage.getNewtitle());
+						LOG.debug("COPY id=" + value + " newtitle="
+								+ copypage.getNewtitle());
 					}
 				} else {
 					if (LOG.isDebugEnabled()) {
@@ -107,59 +105,61 @@ public class TreecopyAction extends ConfluenceActionSupport implements PageAware
 			}
 		}
 
-		Space space = spaceManager.getSpace(request.getParameter("targetspace"));
-		Page parentpage = pageManager.getPage(request.getParameter("targetspace"), request.getParameter("parenttitle"));
-		List<Space> allspaces = getSpacesEditableByUser(AuthenticatedUserThreadLocal.getUser());
+		Space space = spaceManager
+				.getSpace(request.getParameter(TARGETSPACE));
+		Page parentpage = pageManager.getPage(
+				request.getParameter(TARGETSPACE),
+				request.getParameter(PARENTTITLE));
+		List<Space> allspaces = getSpacesEditableByUser(AuthenticatedUserThreadLocal
+				.getUser());
 
 		// Sprawdzamy czy strona o danej nazwie juz istnieje w przestrzeni.
 		if (pageAlreadyExist(space, currCopy)) {
-			this.addActionError("copypagetree.error.page.duplicate", new Object[]{currCopy.getNewtitle()} );
+			this.addActionError("copypagetree.error.page.duplicate",
+					new Object[] { currCopy.getNewtitle() });
 			return executeSetnames();
 		}
-		
-		if ( parentpage != null ) {
-			if (allspaces.contains(space)) {
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("SAVE under \""+parentpage.getTitle()+"\" in \""+space.getDisplayTitle()+"\"");
-				}
-				currCopy.storeCopyPages(space, pageManager, attachmentManager, labelManager, parentpage);
-			} else {
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("NOT SAVED under \""+parentpage.getTitle()+"\" due to insufficient permissions in Space " + space.getKey());
-				}
-			}
-		} else {
-			if (allspaces.contains(space)) {
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("SAVE under Space \""+space.getDisplayTitle()+"\"");
-				}
-				currCopy.storeCopyPages(space, pageManager, attachmentManager, labelManager, null);
-			} else {
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("NOT SAVED due to insufficient permissions in Space " + space.getKey());
-				}
-			}
+
+		if (space != null && parentpage == null) {
+			parentpage = space.getHomePage();
 		}
 
+		if (parentpage == null) {
+			this.addActionError("copypagetree.error.null.parentpage",
+					new Object[] { space.getName() });
+			return executeSetnames();
+		}
 
-
+		if (allspaces.contains(space)) {
+			if (LOG.isDebugEnabled()) {
+				LOG.debug("SAVE under \"" + parentpage.getTitle() + "\" in \""
+						+ space.getDisplayTitle() + "\"");
+			}
+			currCopy.storeCopyPages(space, pageManager, attachmentManager,
+					labelManager, parentpage);
+		} else {
+			if (LOG.isDebugEnabled()) {
+				LOG.debug("NOT SAVED under \"" + parentpage.getTitle()
+						+ "\" due to insufficient permissions in Space "
+						+ space.getKey());
+			}
+		}
 		return "success";
 	}
 
 
-	private CopyPage createCopyPage(Page org, int depth) {
-
+	private CopyPage createCopyPage(Page originalPage, int depth) {
 		int position = 0;
-		if (org.getPosition()!=null) {
-			position = org.getPosition();
+		if (originalPage.getPosition()!=null) {
+			position = originalPage.getPosition();
 		}
 
-		CopyPage pageCopy = new CopyPage(org.getId(), position, depth, org.getTitle());
+		CopyPage pageCopy = new CopyPage(originalPage.getId(), position, depth, originalPage.getTitle());
 
-		if (org.getChildren().size()>0) {
-			for (int i=0; i<org.getChildren().size(); i++) {
-				CopyPage childcopy = createCopyPage((Page)org.getChildren().get(i), depth+1);
-				pageCopy.addChild(childcopy);
+		if (originalPage.getChildren().size()>0) {
+			for (int i=0; i<originalPage.getChildren().size(); i++) {
+				CopyPage childCopy = createCopyPage((Page)originalPage.getChildren().get(i), depth+1);
+				pageCopy.addChild(childCopy);
 			}
 		}
 		return pageCopy;
@@ -307,9 +307,9 @@ public class TreecopyAction extends ConfluenceActionSupport implements PageAware
 		}
 		return true;
 	}
-	
+
 	private boolean pageAlreadyExist(Space space, CopyPage currCopy) {
-			
+
 		Page page = pageManager.getPage(space.getKey(), currCopy.getNewtitle());
 		if (page == null) {
 			return false;
